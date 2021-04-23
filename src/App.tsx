@@ -28,9 +28,8 @@ const { Title, Text } = Typography;
 const key = "key" + Math.floor(Math.random() * 1000000);
 let myPeer: any;
 let globalConn: any;
-let lockTimer;
-let lock = "";
-let localLock = 0;
+let canvasReadFlag = 0;
+let canvasDrawFlag = 0;
 // @ts-ignore
 
 export default function App() {
@@ -107,9 +106,7 @@ export default function App() {
       } else if (data.type === "white") {
         setWhiteBoard(data.payload);
       } else if (data.type === "draw") {
-        canvas.current.loadSaveData(data.payload.data);
-      } else if (data.type === "lock") {
-        lock = data.payload;
+        canvas.current.loadSaveData(data.payload.data, true);
       }
     } catch {
       console.log("所接受数据格式错误");
@@ -138,11 +135,6 @@ export default function App() {
       myPeer.on("close", () => {
         message.error("通话已挂断");
       });
-      // myPeer.on("disconnected", () => {
-      //   isConnecting && setIsConnecting(false);
-      //   setInputValue(undefined);
-      //   message.error("通话已挂断");
-      // });
     }
   }, []);
   useEffect(() => {
@@ -202,35 +194,14 @@ export default function App() {
           brushRadius={2}
           hideGrid
           style={{ width: "100vw", height: "100vh", background: "none" }}
-          disabled={lock !== "" && lock !== key}
-          onChange={(value) => {
+          onDrawEnd={() => {
             console.log(canvas.current.getSaveData());
-            if (lock === "" || lock === key) {
-              if (lock === "") {
-                lock = key;
-                globalConn.send({
-                  type: "lock",
-                  payload: key,
-                });
-              }
-              clearTimeout(lockTimer);
-              lockTimer = setTimeout(() => {
-                lock = "";
-                globalConn.send({
-                  type: "lock",
-                  payload: "",
-                });
-              }, 1000);
-              globalConn?.send({
-                type: "draw",
-                payload: {
-                  data: canvas.current.getSaveData(),
-                  lock: {
-                    lock,
-                  },
-                },
-              });
-            }
+            globalConn?.send({
+              type: "draw",
+              payload: {
+                data: canvas.current.getSaveData(),
+              },
+            });
           }}
         />
       </div>
